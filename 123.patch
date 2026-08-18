@@ -1,0 +1,87 @@
+diff --git a/src/main/java/tech/onetap/module/ModuleStorage.java b/src/main/java/tech/onetap/module/ModuleStorage.java
+index XXXXXXX..YYYYYYY 100644
+--- a/src/main/java/tech/onetap/module/ModuleStorage.java
++++ b/src/main/java/tech/onetap/module/ModuleStorage.java
+@@ -1,6 +1,7 @@
+ package tech.onetap.module;
+
+ import com.google.common.eventbus.Subscribe;
+ import com.google.gson.JsonObject;
+ import lombok.Getter;
+ import lombok.Setter;
+ import net.minecraft.client.option.Perspective;
+ import net.minecraft.util.math.MathHelper;
+@@ -72,9 +73,6 @@ public class ModuleStorage implements IMinecraft {
+     }
+
+-    @Setter private float speedAcceleration;
+-    @Setter private float randomness;
+-
+     @Subscribe
+     private void onGameUpdate(EventGameUpdate e) {
+         if (mc.player == null) return;
+@@ -88,28 +86,19 @@ public class ModuleStorage implements IMinecraft {
+         var aura = get(KillAura.class);
+
+         if (!aura.isEnabled() || aura.getTarget() == null) {
+-            if (mc.options.getPerspective() == Perspective.THIRD_PERSON_FRONT) {
+-                aura.lastYaw = (mc.gameRenderer.getCamera().getYaw() - 180);
+-                aura.lastPitch = -mc.gameRenderer.getCamera().getPitch();
+-            } else {
+-                aura.lastYaw = mc.gameRenderer.getCamera().getYaw();
+-                aura.lastPitch = mc.gameRenderer.getCamera().getPitch();
+-            }
+-
+             if (aura.rotation.is("Vanilla") || Instance.get(FreeLook.class).isActive()) return;
+
+             updateBackwardsOther();
+         }
+     }
+
+@@ -154,40 +143,21 @@ public class ModuleStorage implements IMinecraft {
+
+     private void updateBackwardsOther() {
+-        if(mc.player.isGliding()){
+-            speedAcceleration += 0.06f;
+-
+-        }
+-        else{
+-            speedAcceleration += 0.006f;
+-
+-        }
+-        get(KillAura.class).speedAcceleration = 0;
+-
+-        var angle = new Rotation(mc.gameRenderer.getCamera().getYaw(), mc.gameRenderer.getCamera().getPitch());
+-
+-        var deltaYaw = MathHelper.wrapDegrees(angle.getYaw() - mc.player.getYaw());
+-        var deltaPitch = angle.getPitch() - mc.player.getPitch();
+-        if (mc.options.getPerspective() == Perspective.THIRD_PERSON_FRONT) {
+-            deltaYaw = MathHelper.wrapDegrees((angle.getYaw() - 180) - mc.player.getYaw());
+-            deltaPitch = MathHelper.wrapDegrees(-angle.getPitch() - mc.player.getPitch());
+-        }
+-
+-        var smooth = Math.max(speedAcceleration, 0);
+-
+-        var newYaw = mc.player.getYaw() + deltaYaw * (Math.min(Math.max(smooth, 0), 1));
+-        var newPitch = mc.player.getPitch() + deltaPitch * (Math.min(Math.max(smooth / 2, 0), 1));
+-
+-        var smoothRot = new Rotation(newYaw, newPitch);
+-
+-        RotationComponent.update(smoothRot, 360, 360, 360, 360, 0, 2, false);
++        // Просто применяем ротацию камеры как ротацию прицела (без акселерации/догонялок)
++        float yaw = mc.gameRenderer.getCamera().getYaw();
++        float pitch = mc.gameRenderer.getCamera().getPitch();
++
++        if (mc.options.getPerspective() == Perspective.THIRD_PERSON_FRONT) {
++            yaw -= 180f;
++            pitch = -pitch;
++        }
++
++        KillAura aura = get(KillAura.class);
++        aura.lastYaw = yaw;
++        aura.lastPitch = pitch;
++
++        Rotation rot = new Rotation(yaw, pitch);
++        RotationComponent.update(rot, 360, 360, 360, 360, 0, 2, true);
+     }
+ }
